@@ -19,10 +19,14 @@ if auth == 'auth':
 elif auth == 'basic_auth':
     from api.v1.auth.basic_auth import BasicAuth
     auth = BasicAuth()
+elif auth == 'session_auth':
+    from api.v1.auth.session_auth import SessionAuth
+    auth = SessionAuth()
 
 request_list = ['/api/v1/status/',
                 '/api/v1/unauthorized/',
-                '/api/v1/forbidden/']
+                '/api/v1/forbidden/',
+                '/api/v1/auth_session/login/']
 
 
 @app.before_request
@@ -33,8 +37,10 @@ def filter_request() -> None:
         return
     if not auth.require_auth(request.path, request_list):
         return
-    if auth.authorization_header(request) is None:
+    if (not auth.authorization_header(request) and
+            not auth.session_cookie(request)):
         abort(401)
+    request.current_user = auth.current_user(request)
     if auth.current_user(request) is None:
         abort(403)
 
